@@ -155,7 +155,7 @@ impl<T: Buffer> Code<T> {
 
     // <type definition part> ::=
         // <empty>
-        // | type <type definition> {;<type definition>};
+        // | type <type definition> {;<type definition>}
     fn type_definitions(&mut self) -> ParseResult {
         if self.lookahead != Token::K(Keyword::Type) {
             return Ok(());
@@ -174,14 +174,13 @@ impl<T: Buffer> Code<T> {
                 break;
             }
         }
-
-        self.consume(Token::P(Punctuation::Semicolon))?;
         
         Ok(())
     }
 
     // <type definition> ::= <identifier> = <type>
     fn type_definition(&mut self) -> ParseResult {
+        self.debug("Entering type definition");
         let id = self.identifier()?;
         self.consume(Token::R(Relation::Eq))?;
         let t = self.type_()?;
@@ -190,6 +189,7 @@ impl<T: Buffer> Code<T> {
             self.redefined_identifier(e.id());
         }
 
+        self.debug("Exiting type definition");
         Ok(())
     }
 
@@ -1287,6 +1287,7 @@ mod code_tests {
             " program Name;
               type
                 a = integer
+                b = real
               begin
               end.
             ";
@@ -1561,7 +1562,7 @@ mod code_tests {
             ";
 
         let c = code(input);
-        assert_errors_count(c, 0);
+        assert_errors_count(c, 1);
     }
 
     #[test]
@@ -1615,6 +1616,23 @@ mod code_tests {
                 a = Integer;
                 a = record end;
               begin
+              end.
+            ";
+
+        let c = code(input);
+        assert_errors_count(c, 1);
+    }
+
+    #[test]
+    fn test_check_type_mismatch_with_redefined_type() {
+        let input =
+            " program Name;
+              type
+                real = integer;
+              var
+                x: integer;
+              begin
+                x := 67.786
               end.
             ";
 
